@@ -221,7 +221,112 @@
 .gem-twinkle {
   transform-box: fill-box;
   transform-origin: center;
-  animation: twinkle 4.2s ease-in-out infinite;
+  animation: twinkle var(--dur, 4.2s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* 濁りの靄が、ジェムの周りを立ち昇る */
+@keyframes gem-rise {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: var(--peak, 0.4);
+  }
+  100% {
+    transform: translateY(-90px) scale(1.6);
+    opacity: 0;
+  }
+}
+
+.gem-rise {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gem-rise var(--dur, 7s) ease-out infinite;
+  animation-delay: var(--delay, 0s);
+  opacity: 0;
+}
+
+/* 内部の雲が、ゆっくり渦を巻く */
+@keyframes gem-swirl {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gem-swirl {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gem-swirl 42s linear infinite;
+}
+
+/* 表面を光の筋が横切る（ジェムの外に出る前に戻るので、継ぎ目は見えない） */
+@keyframes gem-sheen {
+  0% {
+    transform: translateX(0);
+  }
+  45%,
+  100% {
+    transform: translateX(260px);
+  }
+}
+
+.gem-sheen {
+  animation: gem-sheen 6s ease-in-out infinite;
+}
+
+/* 濁り度が変わったとき、色がゆっくり移ろう */
+.gem-tone {
+  transition:
+    stop-color 1.2s ease,
+    fill 1.2s ease;
+}
+
+/* ジェム全体が、宙に浮いているように揺れる */
+@keyframes gem-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.6deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(0.6deg);
+  }
+}
+
+.gem-float {
+  animation: gem-float 7s ease-in-out infinite;
+}
+
+/* タップしたときの閃光（一度だけ広がって消える） */
+@keyframes gem-burst-ring {
+  from {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes gem-burst-spark {
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.gem-burst-ring {
+  animation: gem-burst-ring 1.1s ease-out forwards;
+}
+
+.gem-burst-spark {
+  animation: gem-burst-spark 1s ease-out forwards;
 }
 
 .magic-spin {

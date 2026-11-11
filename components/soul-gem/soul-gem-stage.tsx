@@ -20,7 +20,7 @@ function hexagonPoints(radius: number) {
 }
 
 /** 背景に描く魔法陣。外周の目盛り・菱形・六芒の内環で構成する */
-function MagicCircle() {
+export function MagicCircle() {
   const ticks = Array.from({ length: TICK_COUNT }, (_, i) => {
     const outer = polar(188, i, TICK_COUNT);
     const inner = polar(i % 4 === 0 ? 174 : 180, i, TICK_COUNT);
