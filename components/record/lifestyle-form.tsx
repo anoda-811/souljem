@@ -172,7 +172,7 @@ export function LifestyleForm({
                 inputMode="numeric"
                 min={0}
                 max={MAX_MINUTES}
-                step={5}
+                step={1}
                 value={draft[item.id] ?? ""}
                 placeholder="例：30"
                 onChange={(event) => setValue(item.id, event.target.value)}

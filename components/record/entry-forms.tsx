@@ -191,7 +191,7 @@ interface ExerciseDraft {
 
 const MODE_OPTIONS: readonly { mode: ExerciseMode; label: string; unit: string; step: number; max: number }[] = [
   { mode: "reps", label: "回数", unit: "回", step: 1, max: 999 },
-  { mode: "minutes", label: "時間（分）", unit: "分", step: 5, max: 600 },
+  { mode: "minutes", label: "時間（分）", unit: "分", step: 1, max: 600 },
 ];
 
 function newId(): string {
