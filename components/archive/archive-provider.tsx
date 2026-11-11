@@ -19,12 +19,22 @@ import type {
   HabitMark,
   ISODate,
   JournalEntry,
+  LifestyleItem,
 } from "@/lib/domain/types";
 
-/** 1日分の記録のうち、画面から編集できる項目 */
+/** 1日分の記録のうち、画面から編集できる項目。lifestyle は項目ごとの値の全体を渡す */
 export type RecordPatch = Partial<
-  Pick<DailyRecord, "turbidity" | "sleep" | "meals" | "exercises" | "note">
+  Pick<DailyRecord, "turbidity" | "sleep" | "meals" | "exercises" | "note" | "lifestyle">
 >;
+
+/** 行動・気分の項目の、後から変えられる内容 */
+export type LifestyleItemPatch = Partial<Pick<LifestyleItem, "label" | "enabled">>;
+
+/** 習慣名の最大文字数（追加と名前変更で共通） */
+export const HABIT_NAME_MAX = 40;
+
+/** 行動・気分の項目名の最大文字数 */
+export const LIFESTYLE_LABEL_MAX = 20;
 
 interface ArchiveSnapshot {
   today: ISODate;
@@ -48,6 +58,13 @@ interface ArchiveContextValue {
   setHabitStartDate(id: string, date: ISODate): void;
   /** 指定日の ○ × を記す。null にすると未記入（-）に戻す */
   setHabitMark(id: string, date: ISODate, mark: HabitMark | null): void;
+  /** 習慣の名前を変える。空の名前は無視する */
+  renameHabit(id: string, name: string): void;
+  /** 行動・気分の項目を追加する。同じ id があれば何もしない */
+  addLifestyleItem(item: LifestyleItem): void;
+  updateLifestyleItem(id: string, patch: LifestyleItemPatch): void;
+  /** 項目を消し、すべての記録からその値も消す。取り消しはできない */
+  removeLifestyleItem(id: string): void;
 }
 
 const ArchiveContext = createContext<ArchiveContextValue | null>(null);
@@ -139,7 +156,7 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
 
   const addHabit = useCallback(
     (name: string, startDate: ISODate): string | null => {
-      const trimmed = name.trim();
+      const trimmed = name.trim().slice(0, HABIT_NAME_MAX);
       if (!trimmed || !latest.current) return null;
 
       const id = createId();
@@ -226,6 +243,65 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
     [mutateArchive],
   );
 
+  const renameHabit = useCallback(
+    (id: string, name: string) => {
+      const trimmed = name.trim().slice(0, HABIT_NAME_MAX);
+      if (!trimmed) return;
+      mutateArchive((archive) => ({
+        ...archive,
+        habits: archive.habits.map((habit) =>
+          habit.id === id ? { ...habit, name: trimmed } : habit,
+        ),
+      }));
+    },
+    [mutateArchive],
+  );
+
+  const addLifestyleItem = useCallback(
+    (item: LifestyleItem) => {
+      mutateArchive((archive) => {
+        if (archive.lifestyleItems.some((existing) => existing.id === item.id)) return archive;
+        return { ...archive, lifestyleItems: [...archive.lifestyleItems, item] };
+      });
+    },
+    [mutateArchive],
+  );
+
+  const updateLifestyleItem = useCallback(
+    (id: string, patch: LifestyleItemPatch) => {
+      mutateArchive((archive) => ({
+        ...archive,
+        lifestyleItems: archive.lifestyleItems.map((item) => {
+          if (item.id !== id) return item;
+          const label = patch.label?.trim().slice(0, LIFESTYLE_LABEL_MAX);
+          return {
+            ...item,
+            label: label || item.label,
+            enabled: patch.enabled ?? item.enabled,
+          };
+        }),
+      }));
+    },
+    [mutateArchive],
+  );
+
+  /** 項目を消し、すべての記録からその値も消す。取り消しはできないため、呼び出し側で確認する */
+  const removeLifestyleItem = useCallback(
+    (id: string) => {
+      mutateArchive((archive) => ({
+        ...archive,
+        lifestyleItems: archive.lifestyleItems.filter((item) => item.id !== id),
+        records: archive.records.map((record) => {
+          if (!(id in record.lifestyle)) return record;
+          const lifestyle = { ...record.lifestyle };
+          delete lifestyle[id];
+          return { ...record, lifestyle };
+        }),
+      }));
+    },
+    [mutateArchive],
+  );
+
   const value = useMemo<ArchiveContextValue>(
     () => ({
       today: snapshot?.today ?? null,
@@ -238,6 +314,10 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
       purgeTrashedHabit,
       setHabitStartDate,
       setHabitMark,
+      renameHabit,
+      addLifestyleItem,
+      updateLifestyleItem,
+      removeLifestyleItem,
     }),
     [
       snapshot,
@@ -249,6 +329,10 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
       purgeTrashedHabit,
       setHabitStartDate,
       setHabitMark,
+      renameHabit,
+      addLifestyleItem,
+      updateLifestyleItem,
+      removeLifestyleItem,
     ],
   );
 

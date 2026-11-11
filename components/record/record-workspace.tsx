@@ -12,6 +12,7 @@ import {
   SleepForm,
 } from "@/components/record/entry-forms";
 import { GemForm } from "@/components/record/gem-form";
+import { LifestyleForm } from "@/components/record/lifestyle-form";
 import { RecordDialog } from "@/components/record/record-dialog";
 import { SoulGem } from "@/components/soul-gem/soul-gem";
 import { ManuscriptCard } from "@/components/ui/manuscript-card";
@@ -32,25 +33,55 @@ import {
   MEAL_SLOTS,
   TIME_SLOTS,
 } from "@/lib/domain/record";
+import { formatLifestyleValue } from "@/lib/domain/lifestyle";
 import type {
   ArchiveData,
   DailyRecord,
   ExerciseEntry,
   ISODate,
+  LifestyleItem,
   MealRecords,
   TurbidityReadings,
 } from "@/lib/domain/types";
 
-type DialogKind = "gem" | "sleep" | "meal" | "exercise" | "note" | "journal";
+type DialogKind = "gem" | "sleep" | "meal" | "exercise" | "lifestyle" | "note" | "journal";
 
 const DIALOG_META: Record<DialogKind, { eyebrow: string; title: string }> = {
   gem: { eyebrow: "Soul Gem", title: "ソウルジェムを記す" },
   sleep: { eyebrow: "Sleep", title: "睡眠を記す" },
   meal: { eyebrow: "Meal", title: "食事を記す" },
   exercise: { eyebrow: "Exercise", title: "運動を記す" },
+  lifestyle: { eyebrow: "Lifestyle", title: "行動と気分を記す" },
   note: { eyebrow: "Notes", title: "体調・生活メモ" },
   journal: { eyebrow: "Journal", title: "日記を綴る" },
 };
+
+/** 行動と気分の欄。有効な項目のうち、記されたものだけを並べる */
+function LifestyleSummary({
+  items,
+  lifestyle,
+}: {
+  items: readonly LifestyleItem[];
+  lifestyle: Partial<Record<string, number>>;
+}) {
+  const filled = items.flatMap((item) => {
+    const value = lifestyle[item.id];
+    return value === undefined ? [] : [{ item, text: formatLifestyleValue(item, value) }];
+  });
+
+  if (filled.length === 0) return null;
+
+  return (
+    <ul className="space-y-1.5">
+      {filled.map(({ item, text }) => (
+        <li key={item.id} className="flex items-baseline justify-between gap-3">
+          <span className="min-w-0 truncate text-[0.97rem] text-ink">{item.label}</span>
+          <span className="shrink-0 text-sm text-ink-soft">{text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** カレンダーの印を、日ごとにまとめる */
 function buildMarkers(archive: ArchiveData | null): Map<ISODate, DayMarker> {
@@ -158,6 +189,10 @@ function ExerciseSummary({ exercises }: { exercises: ExerciseEntry[] }) {
 /** 今日の記録ページ本体。カレンダーで日付を選び、項目ごとに記録と日記を書く */
 export function RecordWorkspace() {
   const { today, archive, updateRecord, saveJournal } = useArchive();
+  const enabledItems = useMemo(
+    () => archive?.lifestyleItems.filter((item) => item.enabled) ?? [],
+    [archive],
+  );
   const [selected, setSelected] = useState<ISODate | null>(null);
   const [viewMonth, setViewMonth] = useState<YearMonth | null>(null);
   const [dialog, setDialog] = useState<DialogKind | null>(null);
@@ -174,6 +209,7 @@ export function RecordWorkspace() {
   const meals = record?.meals ?? {};
   const exercises = record?.exercises ?? [];
   const hasMeal = MEAL_SLOTS.some(({ slot }) => Boolean(meals[slot]));
+  const hasLifestyle = enabledItems.some((item) => record?.lifestyle[item.id] !== undefined);
   const gemAverage = averageTurbidity(readings);
   const daysAgo = diffDays(today, activeDate);
   const isToday = daysAgo === 0;
@@ -300,8 +336,23 @@ export function RecordWorkspace() {
             </EntryTile>
 
             <EntryTile
+              icon="flask"
+              label="行動・気分"
+              empty={!hasLifestyle}
+              emptyText={
+                enabledItems.length === 0
+                  ? "設定で、記録する項目（読書・食事評価など）を選べます"
+                  : "設定した項目（読書の時間や、食事・気分の評価など）を記す"
+              }
+              onOpen={() => setDialog("lifestyle")}
+            >
+              {record && <LifestyleSummary items={enabledItems} lifestyle={record.lifestyle} />}
+            </EntryTile>
+
+            <EntryTile
               icon="scroll"
               label="体調・生活メモ"
+              wide
               empty={!record?.note}
               emptyText="体の重さや心の動きを記す"
               onOpen={() => setDialog("note")}
@@ -375,6 +426,14 @@ export function RecordWorkspace() {
           <ExerciseForm
             initial={exercises}
             onSave={(value) => saveRecord({ exercises: value })}
+            onCancel={closeDialog}
+          />
+        )}
+        {dialog === "lifestyle" && (
+          <LifestyleForm
+            items={enabledItems}
+            initial={record?.lifestyle ?? {}}
+            onSave={(lifestyle) => saveRecord({ lifestyle })}
             onCancel={closeDialog}
           />
         )}

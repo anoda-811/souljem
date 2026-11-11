@@ -22,7 +22,7 @@ export function SiteNav({ variant }: SiteNavProps) {
 
   if (variant === "tabbar") {
     return (
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-7">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
           return (

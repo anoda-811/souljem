@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useArchive } from "@/components/archive/archive-provider";
+import { HABIT_NAME_MAX, useArchive } from "@/components/archive/archive-provider";
 import { FIELD } from "@/components/record/entry-forms";
 import { HabitCalendar } from "@/components/habits/habit-calendar";
 import { HabitTrash } from "@/components/habits/habit-trash";
@@ -48,6 +48,7 @@ export function HabitsView() {
     removeHabit,
     setHabitStartDate,
     setHabitMark,
+    renameHabit,
   } = useArchive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<ISODate | null>(null);
@@ -56,6 +57,8 @@ export function HabitsView() {
   const [draftStart, setDraftStart] = useState<ISODate | null>(null);
   /** 開始日を編集中のみ値を持つ。null のときは通常表示 */
   const [editingStart, setEditingStart] = useState<ISODate | null>(null);
+  /** 名前を編集中のみ値を持つ。null のときは通常表示 */
+  const [editingName, setEditingName] = useState<string | null>(null);
 
   if (!today || !archive) return <HabitsSkeleton />;
 
@@ -88,6 +91,7 @@ export function HabitsView() {
     const next = habits.find((h) => h.id === id);
     setSelectedId(id);
     setEditingStart(null);
+    setEditingName(null);
     if (next) fitDateTo(next.startDate);
   };
 
@@ -114,12 +118,19 @@ export function HabitsView() {
     fitDateTo(editingStart);
   };
 
+  const handleSaveName = () => {
+    if (!habit || editingName === null || !editingName.trim()) return;
+    renameHabit(habit.id, editingName);
+    setEditingName(null);
+  };
+
   /** 削除は「削除した習慣」へ移すだけなので、確認は挟まない */
   const handleRemove = () => {
     if (!habit) return;
     removeHabit(habit.id);
     setSelectedId(null);
     setEditingStart(null);
+    setEditingName(null);
   };
 
   const streak = habit ? calculateStreak(habit.marks, today, habit.startDate) : 0;
@@ -283,7 +294,18 @@ export function HabitsView() {
                 <div className="flex flex-wrap items-start justify-between gap-5">
                   <div className="min-w-0">
                     <p className="font-display text-sm italic tracking-[0.14em] text-amethyst">Habit</p>
-                    <p className="mt-1 text-xl font-semibold text-ink">{habit.name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <p className="text-xl font-semibold text-ink">{habit.name}</p>
+                      {editingName === null && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingName(habit.name)}
+                          className="text-xs tracking-[0.06em] text-ink-soft underline underline-offset-4 hover:text-ink"
+                        >
+                          名前を変える
+                        </button>
+                      )}
+                    </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs tracking-[0.06em] text-ink-soft">
                       <span>
                         開始日 {formatShortDate(habit.startDate)} ・ 開始から{" "}
@@ -309,6 +331,39 @@ export function HabitsView() {
                     </p>
                   </div>
                 </div>
+
+                {editingName !== null && (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      handleSaveName();
+                    }}
+                    className="mt-5 flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-end"
+                  >
+                    <label className="flex flex-1 flex-col gap-2 text-xs tracking-[0.18em] text-ink-soft">
+                      新しい名前（{HABIT_NAME_MAX} 字まで）
+                      <input
+                        type="text"
+                        value={editingName}
+                        maxLength={HABIT_NAME_MAX}
+                        onChange={(event) => setEditingName(event.target.value)}
+                        className={FIELD}
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={!editingName.trim()}
+                        className="btn btn-primary"
+                      >
+                        保存する
+                      </button>
+                      <button type="button" onClick={() => setEditingName(null)} className="btn btn-ghost">
+                        やめる
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {editingStart !== null && (
                   <div className="mt-5 space-y-3 border-t border-line pt-5">

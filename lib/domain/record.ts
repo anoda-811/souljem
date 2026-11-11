@@ -24,8 +24,33 @@ export const MEAL_SLOTS: readonly { slot: MealSlot; label: string; placeholder: 
   { slot: "snack", label: "間食", placeholder: "例：ナッツ、ほうじ茶" },
 ];
 
+/** 食事評価と気分の段階名（1〜5の順） */
+export const MEAL_RATING_LABELS: readonly string[] = [
+  "乱れた",
+  "少し乱れた",
+  "ふつう",
+  "整っていた",
+  "とても整っていた",
+];
+
+export const MOOD_LABELS: readonly string[] = [
+  "沈んでいる",
+  "やや沈む",
+  "ふつう",
+  "穏やか",
+  "晴れやか",
+];
+
 export function emptyRecord(date: ISODate): DailyRecord {
-  return { date, turbidity: {}, sleep: null, meals: {}, exercises: [], note: null };
+  return {
+    date,
+    turbidity: {},
+    sleep: null,
+    meals: {},
+    exercises: [],
+    note: null,
+    lifestyle: {},
+  };
 }
 
 /** 朝・昼・晩のうち記されたものの平均。1つも記していなければ null */
@@ -45,7 +70,8 @@ export function hasRecordContent(record: DailyRecord): boolean {
     record.sleep !== null ||
     MEAL_SLOTS.some(({ slot }) => Boolean(record.meals[slot])) ||
     record.exercises.length > 0 ||
-    Boolean(record.note)
+    Boolean(record.note) ||
+    Object.keys(record.lifestyle).length > 0
   );
 }
 

@@ -28,9 +28,30 @@ export interface ExerciseEntry {
   amount: number;
 }
 
+/** 1〜5 の段階評価 */
+export type Rating = 1 | 2 | 3 | 4 | 5;
+
 export interface SleepRecord {
   hours: number;
   quality: 1 | 2 | 3 | 4 | 5;
+}
+
+/**
+ * 行動・気分の項目の種類。
+ * - minutes: 時間（分）。0 以上の整数
+ * - rating: 1〜5 の段階評価
+ */
+export type LifestyleKind = "minutes" | "rating";
+
+/** 行動・気分の項目の定義。ユーザーが設定画面で増やし、名前や使う・使わないを変えられる */
+export interface LifestyleItem {
+  id: string;
+  label: string;
+  kind: LifestyleKind;
+  /** 段階評価の 1〜5 の呼び名。minutes では使わない */
+  scale?: readonly string[];
+  /** オフのときは記録画面と分析に出さない（記録した値は残す） */
+  enabled: boolean;
 }
 
 /** 1日分の観測記録 */
@@ -42,6 +63,11 @@ export interface DailyRecord {
   meals: MealRecords;
   exercises: ExerciseEntry[];
   note: string | null;
+  /**
+   * 行動・気分の値。キーは LifestyleItem の id。
+   * 記していない項目はキーを持たない（画面では未記録として扱う）。
+   */
+  lifestyle: Partial<Record<string, number>>;
 }
 
 /** 習慣の1日の記録。done は ○（達成）、missed は ×（未達成） */
@@ -72,4 +98,6 @@ export interface ArchiveData {
   habits: Habit[];
   journal: JournalEntry[];
   trashedHabits: TrashedHabit[];
+  /** 行動・気分の項目の定義（設定画面で編集する） */
+  lifestyleItems: LifestyleItem[];
 }
