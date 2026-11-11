@@ -1,12 +1,13 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { parseISODate } from "@/lib/domain/date";
+import type { Quote } from "@/lib/domain/quotes";
 import type { ISODate } from "@/lib/domain/types";
 
 interface DashboardHeaderProps {
   today: ISODate;
   /** 最初の記録の日が1日目。まだ記録がなければ null */
   researchDay: number | null;
-  quote: string;
+  quote: Quote;
 }
 
 /** 今日の日付と、本日の一節を示す見出し帯（共通の PageHeader を使う） */
@@ -38,8 +39,11 @@ export function DashboardHeader({ today, researchDay, quote }: DashboardHeaderPr
             本日の一節
           </figcaption>
           <blockquote className="mt-2 font-display text-xl leading-relaxed text-ink">
-            「{quote}」
+            「{quote.text}」
           </blockquote>
+          <p className="mt-3 text-right font-body text-sm tracking-[0.04em] text-ink-soft">
+            ― {quote.author}
+          </p>
         </figure>
       }
     />

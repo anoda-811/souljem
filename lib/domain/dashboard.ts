@@ -1,4 +1,5 @@
 import { addDays, diffDays } from "./date";
+import { getDailyQuote, type Quote } from "./quotes";
 import { averageTurbidity, hasRecordContent } from "./record";
 import { calculateStreak } from "./streak";
 import type {
@@ -23,7 +24,7 @@ export interface DashboardSnapshot {
   today: ISODate;
   /** 最初の記録の日を1日目とする研究日数。まだ記録がなければ null */
   researchDay: number | null;
-  quote: string;
+  quote: Quote;
   gem: {
     /** 今日の濁り度（朝・昼・晩の平均） */
     turbidity: number | null;
@@ -43,16 +44,6 @@ export interface DashboardSnapshot {
   };
 }
 
-const QUOTES = [
-  "濁りは、理由もなく沈むことはない。",
-  "澄んだ水は、底まで見える。見えないものは、まだ観ていないだけだ。",
-  "記すことは、観測のはじまりである。",
-  "小さな習慣は、魔力の流れ道をつくる。",
-  "急がずともよい。研究は、積み重ねの中にある。",
-  "疲れは、身体が書きつける最初の報告である。",
-];
-
-const QUOTE_EPOCH: ISODate = "2000-01-01";
 const HISTORY_DAYS = 14;
 
 export function buildDashboardSnapshot(
@@ -103,7 +94,7 @@ export function buildDashboardSnapshot(
   return {
     today,
     researchDay: firstEntryDate ? diffDays(today, firstEntryDate) + 1 : null,
-    quote: QUOTES[diffDays(today, QUOTE_EPOCH) % QUOTES.length],
+    quote: getDailyQuote(today),
     gem: {
       turbidity: todayRecord ? averageTurbidity(todayRecord.turbidity) : null,
       previousTurbidity: previousRecord ? averageTurbidity(previousRecord.turbidity) : null,
