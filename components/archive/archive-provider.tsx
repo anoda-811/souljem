@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { repository } from "@/lib/data";
+import type { SoulArchiveRepository } from "@/lib/data";
 import { toISODate } from "@/lib/domain/date";
 import { emptyRecord } from "@/lib/domain/record";
 import type {
@@ -80,16 +80,26 @@ function createId(): string {
  * 記録データをアプリ全体で共有する。
  * 「今日」の判定と読み書きはクライアントで行うため、サーバー側の事前描画では扱わない。
  */
-export function ArchiveProvider({ children }: { children: ReactNode }) {
+export function ArchiveProvider({
+  children,
+  repository,
+}: {
+  children: ReactNode;
+  /** このアカウントの記録の保存先。アカウントが変わるときは作り直す */
+  repository: SoulArchiveRepository;
+}) {
   const [snapshot, setSnapshot] = useState<ArchiveSnapshot | null>(null);
   // イベントハンドラから常に最新の値を読むための参照
   const latest = useRef<ArchiveSnapshot | null>(null);
 
-  const commit = useCallback((next: ArchiveSnapshot) => {
-    latest.current = next;
-    setSnapshot(next);
-    void repository.save(next.archive);
-  }, []);
+  const commit = useCallback(
+    (next: ArchiveSnapshot) => {
+      latest.current = next;
+      setSnapshot(next);
+      void repository.save(next.archive);
+    },
+    [repository],
+  );
 
   useEffect(() => {
     let active = true;
@@ -105,7 +115,7 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [repository]);
 
   /** 記録データを書き換える共通処理。読み込み前は何もしない */
   const mutateArchive = useCallback(

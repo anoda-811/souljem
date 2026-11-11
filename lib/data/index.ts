@@ -1,8 +1,6 @@
-import { localStorageRepository } from "./local-storage-repository";
-import type { SoulArchiveRepository } from "./repository";
-
 /**
- * アプリ全体で使うリポジトリ。
- * 保存方式を変えるときは、この1行を差し替えるだけでよい。
+ * 記録データの保存先。アカウントごとの鍵を渡して作る。
+ * 保存方式（localStorage → DB など）を変えるときは、この実装を差し替える。
  */
-export const repository: SoulArchiveRepository = localStorageRepository;
+export { createLocalStorageRepository as createRepository } from "./local-storage-repository";
+export type { SoulArchiveRepository } from "./repository";

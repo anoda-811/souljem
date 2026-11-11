@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond } from "next/font/google";
 import type { ReactNode } from "react";
-import { ArchiveProvider } from "@/components/archive/archive-provider";
-import { AppShell } from "@/components/layout/app-shell";
+import { AuthGate } from "@/components/auth/auth-gate";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -32,9 +32,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja" className={`${cormorant.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <ArchiveProvider>
-          <AppShell>{children}</AppShell>
-        </ArchiveProvider>
+        <AuthProvider>
+          <AuthGate>{children}</AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

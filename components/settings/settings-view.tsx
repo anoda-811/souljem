@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
 import { LIFESTYLE_LABEL_MAX, useArchive } from "@/components/archive/archive-provider";
 import { FIELD } from "@/components/record/entry-forms";
 import { ManuscriptCard } from "@/components/ui/manuscript-card";
@@ -232,6 +233,7 @@ function CustomItemForm({
 /** 設定ページ本体。行動・気分の項目を、名前・表示・追加・削除で整える */
 export function SettingsView() {
   const { archive, addLifestyleItem, updateLifestyleItem, removeLifestyleItem } = useArchive();
+  const { user, logout } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
@@ -262,6 +264,19 @@ export function SettingsView() {
   return (
     <div className="space-y-10">
       <PageHeader eyebrow="Settings" title="設定" lead={LEAD} />
+
+      <ManuscriptCard compact>
+        <SectionHeading eyebrow="Account" title="アカウント" titleFont="body" />
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm leading-7 text-ink-soft">
+            <span className="font-display text-lg text-ink">{user?.name}</span> でログイン中です。
+            記録はアカウントごとに分けて保存されます。
+          </p>
+          <button type="button" onClick={logout} className="btn btn-ghost">
+            ログアウト
+          </button>
+        </div>
+      </ManuscriptCard>
 
       <ManuscriptCard>
         <SectionHeading eyebrow="Lifestyle" title="行動・気分の項目" />
