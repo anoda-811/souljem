@@ -4,8 +4,8 @@ import { SectionHeading } from "@/components/ui/section-heading";
 
 const STEPS = [
   "Supabase でプロジェクトを作り、SQL エディタで supabase/schema.sql を実行する。",
-  "Project Settings → API で、Project URL と anon public キーを控える。",
-  ".env.local に NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を書く（.env.example を参考に）。",
+  "Project Settings → API で、Project URL と公開キー（publishable key）を控える。",
+  ".env.local に NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY を書く（.env.example を参考に）。",
   "開発サーバーか、ビルドし直したアプリを起動し直す。",
 ];
 
