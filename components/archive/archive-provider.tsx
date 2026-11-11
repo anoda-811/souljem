@@ -10,6 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ManuscriptCard } from "@/components/ui/manuscript-card";
+import { SectionHeading } from "@/components/ui/section-heading";
 import type { SoulArchiveRepository } from "@/lib/data";
 import { toISODate } from "@/lib/domain/date";
 import { emptyRecord } from "@/lib/domain/record";
@@ -89,6 +91,7 @@ export function ArchiveProvider({
   repository: SoulArchiveRepository;
 }) {
   const [snapshot, setSnapshot] = useState<ArchiveSnapshot | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   // イベントハンドラから常に最新の値を読むための参照
   const latest = useRef<ArchiveSnapshot | null>(null);
 
@@ -105,12 +108,18 @@ export function ArchiveProvider({
     let active = true;
     const today = toISODate(new Date());
 
-    repository.load().then((archive) => {
-      if (!active) return;
-      const next = { today, archive };
-      latest.current = next;
-      setSnapshot(next);
-    });
+    repository
+      .load()
+      .then((archive) => {
+        if (!active) return;
+        const next = { today, archive };
+        latest.current = next;
+        setSnapshot(next);
+      })
+      .catch((error: unknown) => {
+        // 読めなかったときは何も保存しない（空の記録で上書きしないため）
+        if (active) setLoadError(error instanceof Error ? error.message : "記録を読み込めませんでした。");
+      });
 
     return () => {
       active = false;
@@ -345,6 +354,22 @@ export function ArchiveProvider({
       removeLifestyleItem,
     ],
   );
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center px-5 py-12">
+        <ManuscriptCard compact className="max-w-md">
+          <SectionHeading eyebrow="Error" title="記録を開けません" titleFont="body" />
+          <p role="alert" className="mt-5 text-sm leading-7 text-gilt-deep">
+            {loadError}
+          </p>
+          <button type="button" onClick={() => window.location.reload()} className="btn btn-ghost mt-6">
+            再読み込みする
+          </button>
+        </ManuscriptCard>
+      </div>
+    );
+  }
 
   return (
     <ArchiveContext.Provider value={value}>{children}</ArchiveContext.Provider>

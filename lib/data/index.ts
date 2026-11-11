@@ -1,6 +1,6 @@
 /**
- * 記録データの保存先。アカウントごとの鍵を渡して作る。
- * 保存方式（localStorage → DB など）を変えるときは、この実装を差し替える。
+ * 記録データの保存先。ログイン中の人の id を渡して作る。
+ * 保存方式を変えるときは、この実装（SoulArchiveRepository を満たすもの）を差し替える。
  */
-export { createLocalStorageRepository as createRepository } from "./local-storage-repository";
+export { createSupabaseRepository } from "./supabase-repository";
 export type { SoulArchiveRepository } from "./repository";

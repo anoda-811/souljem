@@ -1,7 +1,6 @@
 import { initialLifestyleItems, normalizeRecord } from "@/lib/domain/lifestyle";
 import type { ArchiveData, DailyRecord, LifestyleItem, TrashedHabit } from "@/lib/domain/types";
 import { CURRENT_SCHEMA_VERSION, LEGACY_VERSION, migrateToCurrent } from "./migrations";
-import type { SoulArchiveRepository } from "./repository";
 
 /** 保存されている形。後から足した欄は無い場合があるため、任意項目にしている */
 type StoredArchive = Pick<ArchiveData, "habits" | "journal"> & {
@@ -11,12 +10,12 @@ type StoredArchive = Pick<ArchiveData, "habits" | "journal"> & {
 };
 
 /** 版番号つきの保存形式。版番号の無い古いデータは、中身がそのまま archive の形になっている */
-interface StoredEnvelope {
+export interface StoredEnvelope {
   schemaVersion: number;
   archive: unknown;
 }
 
-function createEmptyArchive(): ArchiveData {
+export function createEmptyArchive(): ArchiveData {
   return {
     records: [],
     habits: [],
@@ -43,20 +42,15 @@ function isEnvelope(value: unknown): value is StoredEnvelope {
 }
 
 /**
- * 保存データを読む。何も無ければ null。
- * 読めないデータ（壊れている・新しすぎる版）は消さずに退避してから null を返す。
+ * 保存されているデータを、画面で使う記録の形に直す。
+ * 版を上げながら読み、読めないもの（壊れている・新しすぎる版）は null を返す。
  */
-function readArchive(storageKey: string): ArchiveData | null {
-  let raw: string | null = null;
+export function decodeArchive(value: unknown): ArchiveData | null {
   try {
-    raw = window.localStorage.getItem(storageKey);
-    if (!raw) return null;
-
-    const parsed: unknown = JSON.parse(raw);
-    const version = isEnvelope(parsed) ? parsed.schemaVersion : LEGACY_VERSION;
-    const body = isEnvelope(parsed) ? parsed.archive : parsed;
+    const version = isEnvelope(value) ? value.schemaVersion : LEGACY_VERSION;
+    const body = isEnvelope(value) ? value.archive : value;
     const migrated = migrateToCurrent(body, version);
-    if (!isStoredArchive(migrated)) throw new Error("記録の形が合いません");
+    if (!isStoredArchive(migrated)) return null;
 
     // 古い記録の欄（読書など）は行動・気分の値に移し、欠けている欄は既定値で埋める
     const records = migrated.records.map(normalizeRecord);
@@ -68,39 +62,11 @@ function readArchive(storageKey: string): ArchiveData | null {
       lifestyleItems: migrated.lifestyleItems ?? initialLifestyleItems(records),
     };
   } catch {
-    // 読めなかった元のデータは、次の保存で上書きされないよう別の鍵に残す
-    if (raw) {
-      try {
-        window.localStorage.setItem(`${storageKey}:backup:${Date.now()}`, raw);
-      } catch {
-        // 退避もできない環境では、ここでは何もしない
-      }
-    }
     return null;
   }
 }
 
-function writeArchive(storageKey: string, data: ArchiveData): void {
-  const envelope: StoredEnvelope = { schemaVersion: CURRENT_SCHEMA_VERSION, archive: data };
-  try {
-    window.localStorage.setItem(storageKey, JSON.stringify(envelope));
-  } catch {
-    // 保存できない環境（容量超過・プライベートブラウズ等）では、表示のみ継続する
-  }
-}
-
-/**
- * 指定した鍵の localStorage に記録を保存する実装。
- * アカウントごとに鍵を分けるため、呼び出し側で鍵を渡す。
- */
-export function createLocalStorageRepository(storageKey: string): SoulArchiveRepository {
-  return {
-    async load() {
-      return readArchive(storageKey) ?? createEmptyArchive();
-    },
-
-    async save(data) {
-      writeArchive(storageKey, data);
-    },
-  };
+/** 保存する形（現在の版番号つき）に包む */
+export function encodeArchive(data: ArchiveData): StoredEnvelope {
+  return { schemaVersion: CURRENT_SCHEMA_VERSION, archive: data };
 }

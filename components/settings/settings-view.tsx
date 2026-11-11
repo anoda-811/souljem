@@ -269,10 +269,10 @@ export function SettingsView() {
         <SectionHeading eyebrow="Account" title="アカウント" titleFont="body" />
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm leading-7 text-ink-soft">
-            <span className="font-display text-lg text-ink">{user?.name}</span> でログイン中です。
-            記録はアカウントごとに分けて保存されます。
+            <span className="break-all font-display text-lg text-ink">{user?.email}</span> でログイン中です。
+            記録は、このアカウントに保存されます。
           </p>
-          <button type="button" onClick={logout} className="btn btn-ghost">
+          <button type="button" onClick={() => void logout()} className="btn btn-ghost">
             ログアウト
           </button>
         </div>

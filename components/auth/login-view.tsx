@@ -1,44 +1,41 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuth, PASSWORD_MIN } from "@/components/auth/auth-provider";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { FIELD } from "@/components/record/entry-forms";
 import { ManuscriptCard } from "@/components/ui/manuscript-card";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { ACCOUNT_NAME_MAX, PASSWORD_MIN, SYSTEM_ACCOUNT_NAME } from "@/lib/auth/accounts";
 import { cn } from "@/lib/cn";
 
 type Mode = "login" | "register";
 
 const LABEL = "mb-2 block text-xs tracking-[0.18em] text-ink-soft";
 
-const TEXT_BUTTON =
-  "text-sm text-ink-soft underline decoration-line-strong underline-offset-4 hover:text-ink";
-
 const MODE_TEXT: Record<Mode, { title: string; submit: string; pending: string; hint: string }> = {
   login: {
     title: "ログイン",
     submit: "ログインする",
     pending: "確かめています…",
-    hint: "system（仮データ）はパスワード無しで入れます。ほかのアカウントは、作るときに決めたパスワードで入ります。",
+    hint: "記録は、登録したメールアドレスのアカウントに保存され、PC でもスマホでも同じ記録を見られます。",
   },
   register: {
     title: "新しく作る",
-    submit: "作って入る",
-    pending: "作っています…",
-    hint: `パスワードは${PASSWORD_MIN}文字以上。記録はこのブラウザの中だけに保存され、サーバーには送られません。同じブラウザを使う人を分ける程度の仕組みです。`,
+    submit: "登録する",
+    pending: "登録しています…",
+    hint: `パスワードは${PASSWORD_MIN}文字以上です。登録後、確認のメールが届く設定になっている場合は、メール内のリンクを開いてからログインしてください。`,
   },
 };
 
-/** ログイン前に出す画面。ログインか、新しいアカウントの作成を選ぶ */
+/** ログイン前に出す画面。メールアドレスでログインか、新しく登録を選ぶ */
 export function LoginView() {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const text = MODE_TEXT[mode];
@@ -46,27 +43,30 @@ export function LoginView() {
   const switchMode = (next: Mode) => {
     setMode(next);
     setError(null);
+    setNotice(null);
     setPassword("");
     setConfirm("");
   };
 
-  // 成功したときは AuthGate が画面を切り替えるので、失敗したときだけ状態を戻す
-  const run = async (task: () => Promise<string | null>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (pending) return;
     setPending(true);
     setError(null);
-    const problem = await task();
-    if (problem) {
-      setError(problem);
-      setPending(false);
-    }
-  };
+    setNotice(null);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void run(() =>
-      mode === "login" ? login(name, password) : register(name, password, confirm),
-    );
+    const result =
+      mode === "login"
+        ? await login(email, password)
+        : await register(email, password, confirm);
+
+    // 成功してログインできた場合は、AuthGate が画面を切り替える
+    if (result.ok) {
+      if (result.notice) setNotice(result.notice);
+    } else {
+      setError(result.error);
+    }
+    setPending(false);
   };
 
   return (
@@ -79,11 +79,7 @@ export function LoginView() {
         <ManuscriptCard>
           <SectionHeading eyebrow="Sign in" title={text.title} />
 
-          <div
-            className="mt-6 flex border border-line-strong"
-            role="group"
-            aria-label="ログインの方法"
-          >
+          <div className="mt-6 flex border border-line-strong" role="group" aria-label="ログインの方法">
             {(["login", "register"] as const).map((option) => {
               const active = mode === option;
               return (
@@ -105,16 +101,15 @@ export function LoginView() {
 
           <form onSubmit={submit} className="mt-8 space-y-6">
             <label className="block">
-              <span className={LABEL}>名前</span>
+              <span className={LABEL}>メールアドレス</span>
               <input
-                type="text"
-                value={name}
-                maxLength={ACCOUNT_NAME_MAX}
-                autoComplete="username"
+                type="email"
+                value={email}
+                autoComplete="email"
                 required
                 onChange={(event) => {
                   setError(null);
-                  setName(event.target.value);
+                  setEmail(event.target.value);
                 }}
                 className={FIELD}
               />
@@ -128,7 +123,7 @@ export function LoginView() {
                 type="password"
                 value={password}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                required={mode === "register"}
+                required
                 onChange={(event) => {
                   setError(null);
                   setPassword(event.target.value);
@@ -159,24 +154,16 @@ export function LoginView() {
                 {error}
               </p>
             )}
+            {notice && (
+              <p role="status" className="text-sm leading-6 text-amethyst-deep">
+                {notice}
+              </p>
+            )}
 
             <button type="submit" disabled={pending} className="btn btn-primary w-full">
               {pending ? text.pending : text.submit}
             </button>
           </form>
-
-          {mode === "login" && (
-            <div className="mt-6 border-t border-line pt-6 text-center">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => void run(() => login(SYSTEM_ACCOUNT_NAME, ""))}
-                className={TEXT_BUTTON}
-              >
-                {SYSTEM_ACCOUNT_NAME}（仮データ）で入る
-              </button>
-            </div>
-          )}
         </ManuscriptCard>
 
         <p className="text-xs leading-6 tracking-[0.04em] text-ink-soft">{text.hint}</p>
