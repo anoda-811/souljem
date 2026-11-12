@@ -48,7 +48,7 @@ export function emptyRecord(date: ISODate): DailyRecord {
     sleep: null,
     meals: {},
     exercises: [],
-    note: null,
+    insights: [],
     lifestyle: {},
   };
 }
@@ -70,7 +70,7 @@ export function hasRecordContent(record: DailyRecord): boolean {
     record.sleep !== null ||
     MEAL_SLOTS.some(({ slot }) => Boolean(record.meals[slot])) ||
     record.exercises.length > 0 ||
-    Boolean(record.note) ||
+    record.insights.length > 0 ||
     Object.keys(record.lifestyle).length > 0
   );
 }

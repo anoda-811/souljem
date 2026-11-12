@@ -1,5 +1,12 @@
 import { initialLifestyleItems, normalizeRecord } from "@/lib/domain/lifestyle";
-import type { ArchiveData, DailyRecord, LifestyleItem, TrashedHabit } from "@/lib/domain/types";
+import { DEFAULT_TAGS } from "@/lib/domain/tags";
+import type {
+  ArchiveData,
+  DailyRecord,
+  LifestyleItem,
+  Tag,
+  TrashedHabit,
+} from "@/lib/domain/types";
 import { CURRENT_SCHEMA_VERSION, LEGACY_VERSION, migrateToCurrent } from "./migrations";
 
 /** 保存されている形。後から足した欄は無い場合があるため、任意項目にしている */
@@ -7,6 +14,7 @@ type StoredArchive = Pick<ArchiveData, "habits" | "journal"> & {
   records: (Partial<DailyRecord> & { date: DailyRecord["date"] })[];
   trashedHabits?: TrashedHabit[];
   lifestyleItems?: LifestyleItem[];
+  tags?: Tag[];
 };
 
 /** 版番号つきの保存形式。版番号の無い古いデータは、中身がそのまま archive の形になっている */
@@ -22,6 +30,7 @@ export function createEmptyArchive(): ArchiveData {
     journal: [],
     trashedHabits: [],
     lifestyleItems: initialLifestyleItems([]),
+    tags: DEFAULT_TAGS.map((tag) => ({ ...tag })),
   };
 }
 
@@ -60,6 +69,8 @@ export function decodeArchive(value: unknown): ArchiveData | null {
       journal: migrated.journal,
       trashedHabits: migrated.trashedHabits ?? [],
       lifestyleItems: migrated.lifestyleItems ?? initialLifestyleItems(records),
+      // タグを初めて使うとき（欄が無いとき）だけ初期値を入れる。消して空になったものは、そのまま空で残す
+      tags: migrated.tags ?? DEFAULT_TAGS.map((tag) => ({ ...tag })),
     };
   } catch {
     return null;

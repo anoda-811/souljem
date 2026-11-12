@@ -88,9 +88,16 @@ export function DailyRecordCard({ record }: DailyRecordCardProps) {
           )}
         </RecordRow>
 
-        <RecordRow icon="scroll" label="体調・生活メモ" muted={!record?.note}>
-          {record?.note ? (
-            <span className="font-display text-[1.05rem] italic">{record.note}</span>
+        <RecordRow icon="scroll" label="考察" muted={!record || record.insights.length === 0}>
+          {record && record.insights.length > 0 ? (
+            <span className="font-display text-[1.05rem] italic">
+              {record.insights[0].text}
+              {record.insights.length > 1 && (
+                <span className="ml-2 font-body text-sm not-italic text-ink-soft">
+                  ほか {record.insights.length - 1} 件
+                </span>
+              )}
+            </span>
           ) : (
             "未記録"
           )}

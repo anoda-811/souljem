@@ -62,7 +62,8 @@ export interface DailyRecord {
   sleep: SleepRecord | null;
   meals: MealRecords;
   exercises: ExerciseEntry[];
-  note: string | null;
+  /** 考察。「こうすればこうなるかも」を一項目ずつ箇条書きで記す。記していない日は空の配列 */
+  insights: Insight[];
   /**
    * 行動・気分の値。キーは LifestyleItem の id。
    * 記していない項目はキーを持たない（画面では未記録として扱う）。
@@ -92,9 +93,25 @@ export interface TrashedHabit extends Habit {
   deletedOn: ISODate;
 }
 
+/** タグ。考察の一行ごとに付ける印で、種類は設定画面で増やしたり名前を変えたりできる */
+export interface Tag {
+  id: string;
+  name: string;
+}
+
+/** 考察の一行。タグは ArchiveData.tags の id を持つ */
+export interface Insight {
+  id: string;
+  text: string;
+  /** 付いているタグの id。付けていない行は空の配列 */
+  tags: string[];
+}
+
 /** 保存層から取り出す、アプリ全体の記録データ */
 export interface ArchiveData {
   records: DailyRecord[];
+  /** タグの種類（設定画面で編集する） */
+  tags: Tag[];
   habits: Habit[];
   journal: JournalEntry[];
   trashedHabits: TrashedHabit[];

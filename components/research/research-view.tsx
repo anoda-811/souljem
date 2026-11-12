@@ -405,11 +405,15 @@ export function ResearchView() {
                   <dt className="text-xs text-ink-soft">濁り度（朝・昼・晩の平均）</dt>
                   <dd className="mt-0.5 font-display text-2xl text-ink">{Math.round(selected.y)}</dd>
                 </div>
-                {selectedRecord && selectedRecord.note && (
+                {selectedRecord && selectedRecord.insights.length > 0 && (
                   <div>
-                    <dt className="text-xs text-ink-soft">この日のメモ</dt>
-                    <dd className="mt-1 line-clamp-3 font-display text-[0.98rem] italic leading-7 text-ink">
-                      {selectedRecord.note}
+                    <dt className="text-xs text-ink-soft">この日の考察</dt>
+                    <dd className="mt-1 font-display text-[0.98rem] italic leading-7 text-ink">
+                      {selectedRecord.insights.slice(0, 3).map((insight) => (
+                        <span key={insight.id} className="block line-clamp-1">
+                          ・{insight.text}
+                        </span>
+                      ))}
                     </dd>
                   </div>
                 )}

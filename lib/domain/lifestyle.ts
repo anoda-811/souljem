@@ -1,4 +1,5 @@
 import { formatMinutes } from "./format";
+import { normalizeInsight } from "./insight";
 import { MEAL_RATING_LABELS, MOOD_LABELS, emptyRecord } from "./record";
 import type { DailyRecord, ISODate, LifestyleItem, LifestyleKind } from "./types";
 
@@ -15,7 +16,6 @@ export interface LifestylePreset {
 
 export const LIFESTYLE_PRESETS: readonly LifestylePreset[] = [
   { id: "reading", label: "読書", kind: "minutes" },
-  { id: "voice", label: "ボイトレ", kind: "minutes" },
   { id: "digital", label: "デジタル利用", kind: "minutes" },
   { id: "meal", label: "食事評価", kind: "rating", scale: MEAL_RATING_LABELS },
   { id: "mood", label: "気分", kind: "rating", scale: MOOD_LABELS },
@@ -99,7 +99,12 @@ export function normalizeRecord(raw: Partial<DailyRecord> & { date: ISODate }): 
     sleep: raw.sleep ?? base.sleep,
     meals: raw.meals ?? base.meals,
     exercises: raw.exercises ?? base.exercises,
-    note: raw.note ?? base.note,
+    insights: Array.isArray(raw.insights)
+      ? raw.insights.flatMap((item: unknown) => {
+          const insight = normalizeInsight(item);
+          return insight ? [insight] : [];
+        })
+      : base.insights,
     lifestyle,
   };
 }

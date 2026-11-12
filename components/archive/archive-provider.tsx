@@ -15,6 +15,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import type { SoulArchiveRepository } from "@/lib/data";
 import { toISODate } from "@/lib/domain/date";
 import { emptyRecord } from "@/lib/domain/record";
+import { createTagId, TAG_NAME_MAX } from "@/lib/domain/tags";
 import type {
   ArchiveData,
   DailyRecord,
@@ -26,7 +27,7 @@ import type {
 
 /** 1日分の記録のうち、画面から編集できる項目。lifestyle は項目ごとの値の全体を渡す */
 export type RecordPatch = Partial<
-  Pick<DailyRecord, "turbidity" | "sleep" | "meals" | "exercises" | "note" | "lifestyle">
+  Pick<DailyRecord, "turbidity" | "sleep" | "meals" | "exercises" | "insights" | "lifestyle">
 >;
 
 /** 行動・気分の項目の、後から変えられる内容 */
@@ -67,6 +68,12 @@ interface ArchiveContextValue {
   updateLifestyleItem(id: string, patch: LifestyleItemPatch): void;
   /** 項目を消し、すべての記録からその値も消す。取り消しはできない */
   removeLifestyleItem(id: string): void;
+  /** タグを追加する。空の名前や同じ名前は無視し、追加したタグの id を返す */
+  addTag(name: string): string | null;
+  /** タグの名前を変える。空の名前は無視する */
+  renameTag(id: string, name: string): void;
+  /** タグを消し、すべての考察からも外す。取り消しはできないため、呼び出し側で確認する */
+  removeTag(id: string): void;
 }
 
 const ArchiveContext = createContext<ArchiveContextValue | null>(null);
@@ -321,6 +328,53 @@ export function ArchiveProvider({
     [mutateArchive],
   );
 
+  const addTag = useCallback(
+    (name: string): string | null => {
+      const trimmed = name.trim().slice(0, TAG_NAME_MAX);
+      if (!trimmed || !latest.current) return null;
+      if (latest.current.archive.tags.some((tag) => tag.name === trimmed)) return null;
+
+      const id = createTagId();
+      mutateArchive((archive) => ({ ...archive, tags: [...archive.tags, { id, name: trimmed }] }));
+      return id;
+    },
+    [mutateArchive],
+  );
+
+  const renameTag = useCallback(
+    (id: string, name: string) => {
+      const trimmed = name.trim().slice(0, TAG_NAME_MAX);
+      if (!trimmed) return;
+      mutateArchive((archive) => ({
+        ...archive,
+        tags: archive.tags.map((tag) => (tag.id === id ? { ...tag, name: trimmed } : tag)),
+      }));
+    },
+    [mutateArchive],
+  );
+
+  const removeTag = useCallback(
+    (id: string) => {
+      mutateArchive((archive) => ({
+        ...archive,
+        tags: archive.tags.filter((tag) => tag.id !== id),
+        records: archive.records.map((record) => {
+          const touched = record.insights.some((insight) => insight.tags.includes(id));
+          if (!touched) return record;
+          return {
+            ...record,
+            insights: record.insights.map((insight) =>
+              insight.tags.includes(id)
+                ? { ...insight, tags: insight.tags.filter((tagId) => tagId !== id) }
+                : insight,
+            ),
+          };
+        }),
+      }));
+    },
+    [mutateArchive],
+  );
+
   const value = useMemo<ArchiveContextValue>(
     () => ({
       today: snapshot?.today ?? null,
@@ -337,6 +391,9 @@ export function ArchiveProvider({
       addLifestyleItem,
       updateLifestyleItem,
       removeLifestyleItem,
+      addTag,
+      renameTag,
+      removeTag,
     }),
     [
       snapshot,
@@ -352,6 +409,9 @@ export function ArchiveProvider({
       addLifestyleItem,
       updateLifestyleItem,
       removeLifestyleItem,
+      addTag,
+      renameTag,
+      removeTag,
     ],
   );
 

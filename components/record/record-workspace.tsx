@@ -8,9 +8,9 @@ import {
   ExerciseForm,
   JournalForm,
   MealForm,
-  NoteForm,
   SleepForm,
 } from "@/components/record/entry-forms";
+import { InsightForm } from "@/components/record/insight-form";
 import { GemForm } from "@/components/record/gem-form";
 import { LifestyleForm } from "@/components/record/lifestyle-form";
 import { RecordDialog } from "@/components/record/record-dialog";
@@ -39,12 +39,14 @@ import type {
   DailyRecord,
   ExerciseEntry,
   ISODate,
+  Insight,
   LifestyleItem,
   MealRecords,
+  Tag,
   TurbidityReadings,
 } from "@/lib/domain/types";
 
-type DialogKind = "gem" | "sleep" | "meal" | "exercise" | "lifestyle" | "note" | "journal";
+type DialogKind = "gem" | "sleep" | "meal" | "exercise" | "lifestyle" | "insight" | "journal";
 
 const DIALOG_META: Record<DialogKind, { eyebrow: string; title: string }> = {
   gem: { eyebrow: "Soul Gem", title: "ソウルジェムを記す" },
@@ -52,7 +54,7 @@ const DIALOG_META: Record<DialogKind, { eyebrow: string; title: string }> = {
   meal: { eyebrow: "Meal", title: "食事を記す" },
   exercise: { eyebrow: "Exercise", title: "運動を記す" },
   lifestyle: { eyebrow: "Lifestyle", title: "行動と気分を記す" },
-  note: { eyebrow: "Notes", title: "体調・生活メモ" },
+  insight: { eyebrow: "Insights", title: "考察を記す" },
   journal: { eyebrow: "Journal", title: "日記を綴る" },
 };
 
@@ -186,15 +188,48 @@ function ExerciseSummary({ exercises }: { exercises: ExerciseEntry[] }) {
   );
 }
 
-/** 今日の記録ページ本体。カレンダーで日付を選び、項目ごとに記録と日記を書く */
-export function RecordWorkspace() {
+/** 考察の欄。箇条書きを上から順に、少しだけ見せる。付いているタグの名前も添える */
+function InsightSummary({ insights, tags }: { insights: readonly Insight[]; tags: readonly Tag[] }) {
+  const shown = insights.slice(0, 3);
+  return (
+    <ul className="space-y-1.5">
+      {shown.map((insight) => {
+        const names = tags.filter((tag) => insight.tags.includes(tag.id));
+        return (
+          <li key={insight.id} className="flex gap-2 font-display text-[1.02rem] italic leading-7 text-ink">
+            <span aria-hidden="true" className="shrink-0 text-gilt-deep">・</span>
+            <span className="line-clamp-1 min-w-0">
+              {insight.text}
+              {names.length > 0 && (
+                <span className="ml-2 font-body text-xs not-italic tracking-[0.06em] text-amethyst">
+                  {names.map((tag) => `#${tag.name}`).join(" ")}
+                </span>
+              )}
+            </span>
+          </li>
+        );
+      })}
+      {insights.length > shown.length && (
+        <li className="text-xs text-ink-soft">ほか {insights.length - shown.length} 件</li>
+      )}
+    </ul>
+  );
+}
+
+/**
+ * 今日の記録ページ本体。カレンダーで日付を選び、項目ごとに記録と日記を書く。
+ * initialDate があれば、その日を最初から開く（考察ページから飛んできたとき）。
+ */
+export function RecordWorkspace({ initialDate }: { initialDate?: ISODate }) {
   const { today, archive, updateRecord, saveJournal } = useArchive();
   const enabledItems = useMemo(
     () => archive?.lifestyleItems.filter((item) => item.enabled) ?? [],
     [archive],
   );
-  const [selected, setSelected] = useState<ISODate | null>(null);
-  const [viewMonth, setViewMonth] = useState<YearMonth | null>(null);
+  const [selected, setSelected] = useState<ISODate | null>(initialDate ?? null);
+  const [viewMonth, setViewMonth] = useState<YearMonth | null>(
+    initialDate ? toYearMonth(initialDate) : null,
+  );
   const [dialog, setDialog] = useState<DialogKind | null>(null);
 
   const markers = useMemo(() => buildMarkers(archive), [archive]);
@@ -210,6 +245,7 @@ export function RecordWorkspace() {
   const exercises = record?.exercises ?? [];
   const hasMeal = MEAL_SLOTS.some(({ slot }) => Boolean(meals[slot]));
   const hasLifestyle = enabledItems.some((item) => record?.lifestyle[item.id] !== undefined);
+  const insights = record?.insights ?? [];
   const gemAverage = averageTurbidity(readings);
   const daysAgo = diffDays(today, activeDate);
   const isToday = daysAgo === 0;
@@ -351,17 +387,13 @@ export function RecordWorkspace() {
 
             <EntryTile
               icon="scroll"
-              label="体調・生活メモ"
+              label="考察"
               wide
-              empty={!record?.note}
-              emptyText="体の重さや心の動きを記す"
-              onOpen={() => setDialog("note")}
+              empty={insights.length === 0}
+              emptyText="こうすればこうなるかも、を箇条書きで記す"
+              onOpen={() => setDialog("insight")}
             >
-              {record?.note && (
-                <p className="line-clamp-3 font-display text-[1.05rem] italic leading-7 text-ink">
-                  {record.note}
-                </p>
-              )}
+              {insights.length > 0 && <InsightSummary insights={insights} tags={archive.tags} />}
             </EntryTile>
 
             <EntryTile
@@ -437,10 +469,11 @@ export function RecordWorkspace() {
             onCancel={closeDialog}
           />
         )}
-        {dialog === "note" && (
-          <NoteForm
-            initial={record?.note ?? null}
-            onSave={(note) => saveRecord({ note })}
+        {dialog === "insight" && (
+          <InsightForm
+            initial={insights}
+            tags={archive.tags}
+            onSave={(value) => saveRecord({ insights: value })}
             onCancel={closeDialog}
           />
         )}

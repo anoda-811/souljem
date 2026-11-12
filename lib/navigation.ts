@@ -15,6 +15,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/record", label: "今日の記録", sub: "睡眠・食事・運動", icon: "scroll", numeral: "III" },
   { href: "/habits", label: "習慣", sub: "継続の印", icon: "compass", numeral: "IV" },
   { href: "/journal", label: "日記", sub: "頁と書架", icon: "quill", numeral: "V" },
-  { href: "/research", label: "研究", sub: "関係の分析", icon: "flask", numeral: "VI" },
-  { href: "/settings", label: "設定", sub: "記録の項目", icon: "sparkle", numeral: "VII" },
+  { href: "/insights", label: "考察", sub: "こうなるかも", icon: "flame", numeral: "VI" },
+  { href: "/research", label: "研究", sub: "関係の分析", icon: "flask", numeral: "VII" },
+  { href: "/settings", label: "設定", sub: "記録の項目", icon: "sparkle", numeral: "VIII" },
 ];

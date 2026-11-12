@@ -8,17 +8,79 @@
  *   古い版のデータは、開いたときに順番に変換されてから画面に渡る。
  */
 
-/** 版番号を付ける前のデータの版 */
+/** 版番号を付ける前のデータの版（体調・生活メモが note の文章だった形） */
 export const LEGACY_VERSION = 2;
 
-/** いまの保存形式の版 */
-export const CURRENT_SCHEMA_VERSION = 2;
+/** いまの保存形式の版（考察の一行がタグを持つ形） */
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** from の版の形を、from + 1 の版の形に変える */
 type Migration = (body: unknown) => unknown;
 
-/** 版ごとの変換。キーは変換元の版。現在は変換が無い（版 2 のまま） */
-const MIGRATIONS: Record<number, Migration> = {};
+/** 箇条書きの記号（・ - * • など）と、行頭の空白を外す */
+const BULLET_PREFIX = /^\s*[・\-*•]\s*/;
+
+/**
+ * 体調・生活メモの文章を、考察の箇条書きに分ける。
+ * 改行ごとに一項目にし、空の行は捨てる。
+ */
+function splitNoteIntoInsights(note: unknown): string[] {
+  if (typeof note !== "string") return [];
+  return note
+    .split(/\r?\n/)
+    .map((line) => line.replace(BULLET_PREFIX, "").trim())
+    .filter((line) => line.length > 0);
+}
+
+/** 版 2 → 3: 記録の note（メモの文章）を insights（考察の箇条書き）に移す */
+const migrateNoteToInsights: Migration = (body) => {
+  if (typeof body !== "object" || body === null) return body;
+  const archive = body as { records?: unknown };
+  if (!Array.isArray(archive.records)) return body;
+
+  return {
+    ...archive,
+    records: archive.records.map((record: unknown) => {
+      if (typeof record !== "object" || record === null) return record;
+      const { note, ...rest } = record as Record<string, unknown>;
+      return { ...rest, insights: splitNoteIntoInsights(note) };
+    }),
+  };
+};
+
+/**
+ * 版 3 → 4: 考察の一行（文字）を、id・本文・タグの欄を持つ形に変える。
+ * タグはまだ無いので、移した行はすべて空のタグで始まる。
+ */
+const migrateInsightsToObjects: Migration = (body) => {
+  if (typeof body !== "object" || body === null) return body;
+  const archive = body as { records?: unknown };
+  if (!Array.isArray(archive.records)) return body;
+
+  return {
+    ...archive,
+    records: archive.records.map((record: unknown) => {
+      if (typeof record !== "object" || record === null) return record;
+      const { date, insights, ...rest } = record as Record<string, unknown>;
+      const lines = Array.isArray(insights) ? insights : [];
+      return {
+        ...rest,
+        date,
+        insights: lines.flatMap((line: unknown, index: number) =>
+          typeof line === "string" && line.trim() !== ""
+            ? [{ id: `ins-${String(date)}-${index}`, text: line.trim(), tags: [] }]
+            : [],
+        ),
+      };
+    }),
+  };
+};
+
+/** 版ごとの変換。キーは変換元の版 */
+const MIGRATIONS: Record<number, Migration> = {
+  2: migrateNoteToInsights,
+  3: migrateInsightsToObjects,
+};
 
 /**
  * 保存データを現在の版まで順に変換する。

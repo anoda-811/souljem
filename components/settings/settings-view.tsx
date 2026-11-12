@@ -9,10 +9,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { cn } from "@/lib/cn";
 import { DEFAULT_SCALE, LIFESTYLE_PRESETS, presetItem } from "@/lib/domain/lifestyle";
-import type { LifestyleItem, LifestyleKind } from "@/lib/domain/types";
+import { TAG_NAME_MAX } from "@/lib/domain/tags";
+import type { LifestyleItem, LifestyleKind, Tag } from "@/lib/domain/types";
 
 const LEAD =
-  "記録と研究で使う「行動・気分」の項目を、自分の暮らしに合わせて整えます。読書やボイトレなどは、使う人だけ追加してください。";
+  "記録と研究で使う「行動・気分」の項目を、自分の暮らしに合わせて整えます。読書や瞑想などは、使う人だけ追加してください。";
 
 const LABEL = "mb-2 block text-xs tracking-[0.18em] text-ink-soft";
 
@@ -230,9 +231,129 @@ function CustomItemForm({
   );
 }
 
+/** タグの種類を、追加・名前の変更・削除で整える。考察の一行に付けるタグの一覧になる */
+function TagManager({
+  tags,
+  onAdd,
+  onRename,
+  onRemove,
+}: {
+  tags: readonly Tag[];
+  onAdd: (name: string) => void;
+  onRename: (id: string, name: string) => void;
+  onRemove: (tag: Tag) => void;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("タグの名前を入れてください。");
+      return;
+    }
+    if (tags.some((tag) => tag.name === trimmed)) {
+      setError("同じ名前のタグがあります。");
+      return;
+    }
+    onAdd(trimmed);
+    setName("");
+    setError(null);
+  };
+
+  return (
+    <>
+      {tags.length === 0 ? (
+        <p className="mt-8 font-display text-[1.05rem] italic leading-8 text-ink-soft">
+          まだタグがありません。下から追加してください。
+        </p>
+      ) : (
+        <ul className="mt-6">
+          {tags.map((tag) => (
+            <li
+              key={tag.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-4 last:border-0"
+            >
+              {editingId === tag.id ? (
+                <form
+                  onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                    event.preventDefault();
+                    onRename(tag.id, draft);
+                    setEditingId(null);
+                  }}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <input
+                    type="text"
+                    value={draft}
+                    maxLength={TAG_NAME_MAX}
+                    aria-label={`${tag.name} の新しい名前`}
+                    onChange={(event) => setDraft(event.target.value)}
+                    className={cn(FIELD, "w-48")}
+                  />
+                  <button type="submit" className="btn btn-primary">
+                    変える
+                  </button>
+                  <button type="button" onClick={() => setEditingId(null)} className="btn btn-ghost">
+                    やめる
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span className="font-display text-lg text-ink">#{tag.name}</span>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(tag.id);
+                        setDraft(tag.name);
+                      }}
+                      className={TEXT_BUTTON}
+                    >
+                      名前を変える
+                    </button>
+                    <button type="button" onClick={() => onRemove(tag)} className={cn(TEXT_BUTTON, "text-gilt-deep")}>
+                      消す
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form onSubmit={submit} className="mt-8 flex flex-wrap items-end gap-3 border-t border-line pt-8">
+        <label className="block min-w-0 flex-1">
+          <span className={LABEL}>新しいタグ</span>
+          <input
+            type="text"
+            value={name}
+            maxLength={TAG_NAME_MAX}
+            placeholder="例：散歩、カフェイン"
+            onChange={(event) => {
+              setError(null);
+              setName(event.target.value);
+            }}
+            className={FIELD}
+          />
+        </label>
+        <button type="submit" className="btn btn-primary">
+          タグを追加する
+        </button>
+        {error && <p className="w-full text-xs text-gilt-deep">{error}</p>}
+      </form>
+    </>
+  );
+}
+
 /** 設定ページ本体。行動・気分の項目を、名前・表示・追加・削除で整える */
 export function SettingsView() {
-  const { archive, addLifestyleItem, updateLifestyleItem, removeLifestyleItem } = useArchive();
+  const { archive, addLifestyleItem, updateLifestyleItem, removeLifestyleItem, addTag, renameTag, removeTag } =
+    useArchive();
   const { user, logout } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -326,6 +447,24 @@ export function SettingsView() {
           <p className={LABEL}>自分で作る</p>
           <CustomItemForm existingLabels={labels} onAdd={addLifestyleItem} />
         </div>
+      </ManuscriptCard>
+
+      <ManuscriptCard>
+        <SectionHeading eyebrow="Tags" title="タグの種類" />
+        <p className="mt-4 text-sm leading-7 text-ink-soft">
+          考察の一行に付けるタグです。消すと、すべての考察からも外れます。
+        </p>
+        <TagManager
+          tags={archive.tags}
+          onAdd={(name) => addTag(name)}
+          onRename={renameTag}
+          onRemove={(tag) => {
+            const confirmed = window.confirm(
+              `「${tag.name}」を消します。すべての考察からも外れ、元に戻せません。\n\n消してもよろしいですか？`,
+            );
+            if (confirmed) removeTag(tag.id);
+          }}
+        />
       </ManuscriptCard>
 
       <p className="text-xs leading-6 tracking-[0.04em] text-ink-soft">

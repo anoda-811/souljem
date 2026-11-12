@@ -334,63 +334,6 @@ export function ExerciseForm({
   );
 }
 
-function TextForm({
-  initial,
-  placeholder,
-  rows,
-  onSave,
-  onCancel,
-  clearLabel,
-}: {
-  initial: string | null;
-  placeholder: string;
-  rows: number;
-  onSave: (value: string | null) => void;
-  onCancel: () => void;
-  clearLabel: string;
-}) {
-  const [text, setText] = useState(initial ?? "");
-
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave(text.trim() || null);
-      }}
-    >
-      <label className="block">
-        <span className={LABEL}>内容</span>
-        <textarea
-          rows={rows}
-          value={text}
-          placeholder={placeholder}
-          onChange={(event) => setText(event.target.value)}
-          className={cn(FIELD, "resize-y")}
-        />
-      </label>
-      <FormActions
-        onCancel={onCancel}
-        onClear={initial ? () => onSave(null) : undefined}
-        clearLabel={clearLabel}
-      />
-    </form>
-  );
-}
-
-export function NoteForm(props: {
-  initial: string | null;
-  onSave: (value: string | null) => void;
-  onCancel: () => void;
-}) {
-  return (
-    <TextForm
-      {...props}
-      rows={5}
-      placeholder="体の重さ、心の動き、ふと思ったことなど"
-      clearLabel="メモを消す"
-    />
-  );
-}
 
 export function JournalForm({
   initial,

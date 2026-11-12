@@ -145,7 +145,7 @@ export function LifestyleForm({
     return (
       <div>
         <p className="text-sm leading-7 text-ink-soft">
-          記録できる項目がありません。設定で読書やボイトレなどを追加すると、ここに並びます。
+          記録できる項目がありません。設定で読書や瞑想などを追加すると、ここに並びます。
         </p>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onCancel} className="btn btn-ghost">
